@@ -1,0 +1,20 @@
+<!DOCTYPE>
+<html>
+    
+    <head>
+        <title>Tasks</title>
+    </head>
+
+    <body>
+        <h1>Your Tasks</h1>
+        <ul>
+            {% for task in tasks %}
+             <li>
+                <strong>{{ task.title }}</strong> — {{ task.status }}
+             </li>
+            {% endfor %}
+        </ul>
+        <a href="/">Back Home/</a>
+    </body>
+
+    </html>
