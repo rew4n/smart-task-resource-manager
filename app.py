@@ -50,5 +50,20 @@ def delete_task(task_id):
     db.session.commit()
     return redirect(url_for("tasks"))
 
+@app.route("/tasks/<int:task_id>/edit", methods=["GET", "POST"])
+def edit_task(task_id):
+    task = Task.query.get_or_404(task_id)
+
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        if title:
+            task.title = title
+            db.session.commit()
+        return redirect(url_for("tasks"))
+
+    return render_template("edit_task.html", task=task)
+
+
+
 if __name__ == "__main__":
     app.run(debug=True)
