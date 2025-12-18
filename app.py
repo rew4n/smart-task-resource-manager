@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from datetime import datetime, date
 
 app = Flask(__name__)
 
@@ -32,6 +32,9 @@ def tasks():
         title = request.form.get("title", "").strip()
         description = request.form.get("description", "").strip()
 
+        due_date_raw = request.form.get("due_date", "").strip()
+        due_date = date.fromisoformat(due_date_raw) if due_date_raw else None
+        
         if title:
             db.session.add(Task(title=title, description=description))
             db.session.commit()
