@@ -44,7 +44,12 @@ def tasks():
     today = date.today()
     due_soon_cutoff = today + timedelta(days=3)
 
-    all_tasks = Task.query.order_by(Task.created_at.desc()).all()
+    all_tasks = Task.query.order_by(
+        Task.due_date.is_(None),   # False (has date) comes first, True (None) last
+        Task.due_date.asc(),
+        Task.created_at.desc()
+    ).all()
+    
     return render_template(
         "tasks.html",
         tasks=all_tasks,
