@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
@@ -50,20 +50,28 @@ def delete_task(task_id):
     db.session.commit()
     return redirect(url_for("tasks"))
 
-@app.route("/tasks/<int:task_id>/edit", methods=["GET", "POST"])
+@app.route("/tasks/<int:task_id>/edit", methods=["GET"])
 def edit_task(task_id):
     task = Task.query.get_or_404(task_id)
-
-    if request.method == "POST":
-        title = request.form.get("title", "").strip()
-        if title:
-            task.title = title
-            db.session.commit()
-        return redirect(url_for("tasks"))
-
     return render_template("edit_task.html", task=task)
+
+@app.route("/tasks/<int:task_id>/edit", methods=["POST"])
+def update_task(task_id):
+    task = Task.query.get_or_404(task_id)
+
+    title = request.form.get("title", "").strip()
+    if not title:
+        flash("Title cannot be empty.")
+        return redirect(url_for("edit_task", task_id=task.id))
+
+    task.title = title
+    db.session.commit()
+    flash("Task updated.")
+    return redirect(url_for("tasks"))
+
 
 
 
 if __name__ == "__main__":
+    app.secret_key = "dev-secret"  # later you can move this to env var
     app.run(debug=True)
