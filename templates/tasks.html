@@ -4,17 +4,25 @@
     <h1>Tasks</h1>
 
     <form method="POST">
-      <input name="title" placeholder="New task..." />
-      <button type="submit">Add</button>
+        <input name="title" placeholder="New task..." required />
+        <br>
+        <textarea name="description" placeholder="Description (optional)"></textarea>
+        <br>
+        <button type="submit">Add</button>
     </form>
 
+
     <ul>
-      {% for task in tasks %}
+{% for task in tasks %}
   <div>
     {% if task.done %}
       <s>{{ task.title }}</s>
     {% else %}
       {{ task.title }}
+    {% endif %}
+
+    {% if task.description %}
+      <p>{{ task.description }}</p>
     {% endif %}
 
     <a href="{{ url_for('edit_task', task_id=task.id) }}">Edit</a>
@@ -26,9 +34,10 @@
     <form method="post" action="{{ url_for('delete_task', task_id=task.id) }}" style="display:inline;">
       <button type="submit">Delete</button>
     </form>
-    <a href="{{ url_for('edit_task', task_id=task.id) }}">Edit</a>
   </div>
 {% endfor %}
+
+
 
     </ul>
     <p><a href="/">Back to home</a></p>

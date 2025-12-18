@@ -13,6 +13,7 @@ db = SQLAlchemy(app)
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.Text, nullable=True)
     done = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -28,13 +29,18 @@ def home():
 def tasks():
     if request.method == "POST":
         title = request.form.get("title", "").strip()
+        description = request.form.get("description", "").strip()
+
         if title:
-            db.session.add(Task(title=title))
+            db.session.add(Task(title=title, description=description))
             db.session.commit()
+
         return redirect(url_for("tasks"))
 
     all_tasks = Task.query.order_by(Task.created_at.desc()).all()
     return render_template("tasks.html", tasks=all_tasks)
+
+
 
 @app.route("/tasks/<int:task_id>/toggle", methods=["POST"])
 def toggle_task(task_id):
