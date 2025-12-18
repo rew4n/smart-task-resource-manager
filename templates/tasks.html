@@ -1,28 +1,28 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-  <head>
-    <title>Tasks</title>
-  </head>
   <body>
     <h1>Tasks</h1>
 
     <form method="POST">
-      <input name="title" placeholder="New task..." required />
+      <input name="title" placeholder="New task..." />
       <button type="submit">Add</button>
     </form>
 
-    <hr />
+    <ul>
+      {% for t in tasks %}
+        <li>
+          {% if t.done %}<s>{{ t.title }}</s>{% else %}{{ t.title }}{% endif %}
 
-    {% if tasks %}
-      <ul>
-        {% for task in tasks %}
-          <li>{{ task.title }}</li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p>No tasks yet.</p>
-    {% endif %}
+          <form method="POST" action="/tasks/{{ t.id }}/toggle" style="display:inline;">
+            <button type="submit">{% if t.done %}Undo{% else %}Done{% endif %}</button>
+          </form>
 
+          <form method="POST" action="/tasks/{{ t.id }}/delete" style="display:inline;">
+            <button type="submit">Delete</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
     <p><a href="/">Back to home</a></p>
   </body>
 </html>
