@@ -1,20 +1,28 @@
-<!DOCTYPE>
+<!DOCTYPE html>
 <html>
-    
-    <head>
-        <title>Tasks</title>
-    </head>
+  <head>
+    <title>Tasks</title>
+  </head>
+  <body>
+    <h1>Tasks</h1>
 
-    <body>
-        <h1>Your Tasks</h1>
-        <ul>
-            {% for task in tasks %}
-             <li>
-                <strong>{{ task.title }}</strong> — {{ task.status }}
-             </li>
-            {% endfor %}
-        </ul>
-        <a href="/">Back Home/</a>
-    </body>
+    <form method="POST">
+      <input name="title" placeholder="New task..." required />
+      <button type="submit">Add</button>
+    </form>
 
-    </html>
+    <hr />
+
+    {% if tasks %}
+      <ul>
+        {% for task in tasks %}
+          <li>{{ task.title }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>No tasks yet.</p>
+    {% endif %}
+
+    <p><a href="/">Back to home</a></p>
+  </body>
+</html>
