@@ -1,8 +1,17 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, session
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta, date
 
 app = Flask(__name__)
+
+app.secret_key = "dev-secret"  # keep for now (later move to env var)
+
+# Hardcoded demo user
+DEMO_USER = {
+    "username": "admin",
+    "password": "123"
+}
+
 
 # SQLite database stored in project folder as tasks.db
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///tasks.db"
@@ -21,6 +30,31 @@ class Task(db.Model):
 @app.before_request
 def create_tables():
     db.create_all()
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "").strip()
+
+        if username == DEMO_USER["username"] and password == DEMO_USER["password"]:
+            session["user"] = username
+            flash("Logged in!")
+            return redirect(url_for("tasks"))
+
+        flash("Invalid login.")
+        return redirect(url_for("login"))
+
+    return render_template("login.html")
+
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    session.clear()
+    flash("Logged out.")
+    return redirect(url_for("home"))
+   
 
 @app.route("/")
 def home():
@@ -49,7 +83,7 @@ def tasks():
         Task.due_date.asc(),
         Task.created_at.desc()
     ).all()
-    
+
     return render_template(
         "tasks.html",
         tasks=all_tasks,
