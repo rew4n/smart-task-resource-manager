@@ -73,13 +73,11 @@ def update_task(task_id):
         return redirect(url_for("edit_task", task_id=task.id))
 
     task.title = title
-    task.description = description
+    task.description = description  # ✅ this was missing
     db.session.commit()
+
     flash("Task updated.")
     return redirect(url_for("tasks"))
-
-
-
 
 
 if __name__ == "__main__":
