@@ -66,14 +66,18 @@ def update_task(task_id):
     task = Task.query.get_or_404(task_id)
 
     title = request.form.get("title", "").strip()
+    description = request.form.get("description", "").strip()
+
     if not title:
         flash("Title cannot be empty.")
         return redirect(url_for("edit_task", task_id=task.id))
 
     task.title = title
+    task.description = description
     db.session.commit()
     flash("Task updated.")
     return redirect(url_for("tasks"))
+
 
 
 
