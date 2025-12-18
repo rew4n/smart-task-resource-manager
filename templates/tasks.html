@@ -28,8 +28,17 @@
     {% endif %}
 
     {% if task.due_date %}
-      <small>Due: {{ task.due_date }}</small>
+     <small>Due: {{ task.due_date.strftime("%Y-%m-%d") }}</small>
+
+     {% if (not task.done) and (task.due_date < today) %}
+        <strong> — OVERDUE</strong>
+    {% elif (not task.done) and (task.due_date <= due_soon_cutoff) %}
+        <strong> — Due soon</strong>
     {% endif %}
+    {% else %}
+    <small>Due: —</small>
+    {% endif %}
+
 
 
     

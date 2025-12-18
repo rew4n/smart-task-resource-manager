@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime, date
+from datetime import datetime, timedelta, date
 
 app = Flask(__name__)
 
@@ -34,16 +34,23 @@ def tasks():
 
         due_date_raw = request.form.get("due_date", "").strip()
         due_date = date.fromisoformat(due_date_raw) if due_date_raw else None
-        
+
         if title:
-            db.session.add(Task(title=title, description=description))
+            db.session.add(Task(title=title, description=description, due_date=due_date))
             db.session.commit()
 
         return redirect(url_for("tasks"))
 
-    all_tasks = Task.query.order_by(Task.created_at.desc()).all()
-    return render_template("tasks.html", tasks=all_tasks)
+    today = date.today()
+    due_soon_cutoff = today + timedelta(days=3)
 
+    all_tasks = Task.query.order_by(Task.created_at.desc()).all()
+    return render_template(
+        "tasks.html",
+        tasks=all_tasks,
+        today=today,
+        due_soon_cutoff=due_soon_cutoff
+    )   
 
 
 @app.route("/tasks/<int:task_id>/toggle", methods=["POST"])
@@ -71,6 +78,8 @@ def update_task(task_id):
 
     title = request.form.get("title", "").strip()
     description = request.form.get("description", "").strip()
+    due_date_raw = request.form.get("due_date", "").strip()
+    due_date = date.fromisoformat(due_date_raw) if due_date_raw else None
 
     if not title:
         flash("Title cannot be empty.")
@@ -78,6 +87,7 @@ def update_task(task_id):
 
     task.title = title
     task.description = description
+    task.due_date = due_date
 
     db.session.commit()
     flash("Task updated.")

@@ -8,6 +8,8 @@
       <br>
       <textarea name="description">{{ task.description }}</textarea>
       <br>
+      <input type="date" name="due_date" value="{{ task.due_date.isoformat() if task.due_date else '' }}">
+      <br>
       <button type="submit">Save</button>
     </form>
 
