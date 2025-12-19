@@ -20,11 +20,13 @@ db = SQLAlchemy(app)
 
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    owner = db.Column(db.String(80), nullable=False, index=True)
     title = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text, nullable=True)
     due_date = db.Column(db.Date, nullable=True)
     done = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
 
 # Create tables once when app starts (better than before_request)
 with app.app_context():
@@ -77,7 +79,7 @@ def tasks():
         due_date = date.fromisoformat(due_date_raw) if due_date_raw else None
 
         if title:
-            db.session.add(Task(title=title, description=description, due_date=due_date))
+            db.session.add(Task(owner=session["user"], title=title, description=description, due_date=due_date))
             db.session.commit()
 
         return redirect(url_for("tasks"))
@@ -85,11 +87,12 @@ def tasks():
     today = date.today()
     due_soon_cutoff = today + timedelta(days=3)
 
-    all_tasks = Task.query.order_by(
+    all_tasks = Task.query.filter_by(owner=session["user"]).order_by(
         Task.due_date.is_(None),
         Task.due_date.asc(),
         Task.created_at.desc()
     ).all()
+
 
     return render_template(
         "tasks.html",
