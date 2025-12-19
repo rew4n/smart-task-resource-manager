@@ -20,7 +20,7 @@ db = SQLAlchemy(app)
 
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    owner = db.Column(db.String(80), nullable=False, index=True)
+    owner = db.Column(db.String(80), nullable=False)
     title = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text, nullable=True)
     due_date = db.Column(db.Date, nullable=True)
@@ -29,14 +29,16 @@ class Task(db.Model):
 
 
 # Create tables once when app starts (better than before_request)
-with app.app_context():
-    db.create_all()
+def init_db():
+    with app.app_context():
+        db.create_all()
+
 
 def login_required(view_func):
     @wraps(view_func)
     def wrapper(*args, **kwargs):
         # Strict: must be logged in as DEMO_USER
-        if session.get("user") != DEMO_USER["username"]:
+        if "user" not in session:
             flash("Please log in first.")
             return redirect(url_for("login"))
         return view_func(*args, **kwargs)
@@ -104,7 +106,7 @@ def tasks():
 @app.route("/tasks/<int:task_id>/toggle", methods=["POST"])
 @login_required
 def toggle_task(task_id):
-    task = Task.query.get_or_404(task_id)
+    task = Task.query.filter_by(id=task_id, owner=session["user"]).first_or_404()
     task.done = not task.done
     db.session.commit()
     return redirect(url_for("tasks"))
@@ -112,7 +114,7 @@ def toggle_task(task_id):
 @app.route("/tasks/<int:task_id>/delete", methods=["POST"])
 @login_required
 def delete_task(task_id):
-    task = Task.query.get_or_404(task_id)
+    task = Task.query.filter_by(id=task_id, owner=session["user"]).first_or_404()
     db.session.delete(task)
     db.session.commit()
     return redirect(url_for("tasks"))
@@ -120,7 +122,7 @@ def delete_task(task_id):
 @app.route("/tasks/<int:task_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit_task(task_id):
-    task = Task.query.get_or_404(task_id)
+    task = Task.query.filter_by(id=task_id, owner=session["user"]).first_or_404()
 
     if request.method == "POST":
         title = request.form.get("title", "").strip()
@@ -143,4 +145,6 @@ def edit_task(task_id):
     return render_template("edit_task.html", task=task)
 
 if __name__ == "__main__":
+    init_db()
     app.run(debug=True)
+
