@@ -144,6 +144,28 @@ def edit_task(task_id):
 
     return render_template("edit_task.html", task=task)
 
+@app.route("/api/tasks", methods=["GET"])
+@login_required
+def api_get_tasks():
+    tasks = Task.query.filter_by(owner=session["user"]).order_by(
+        Task.created_at.desc()
+    ).all()
+
+    return {
+        "tasks": [
+            {
+                "id": task.id,
+                "title": task.title,
+                "description": task.description,
+                "due_date": task.due_date.isoformat() if task.due_date else None,
+                "done": task.done,
+                "created_at": task.created_at.isoformat()
+            }
+            for task in tasks
+        ]
+    }
+
+
 if __name__ == "__main__":
     init_db()
     app.run(debug=True)
