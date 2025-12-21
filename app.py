@@ -221,6 +221,20 @@ def api_update_task(task_id):
     return {"message": "Task updated"}
 
 
+@app.route("/api/tasks/<int:task_id>", methods=["DELETE"])
+@login_required
+def api_delete_task(task_id):
+    task = Task.query.filter_by(
+        id=task_id,
+        owner=session["user"]
+    ).first_or_404()
+
+    db.session.delete(task)
+    db.session.commit()
+
+    return {"message": "Task deleted"}
+
+
 if __name__ == "__main__":
     init_db()
     app.run(debug=True)
