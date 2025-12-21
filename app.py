@@ -166,6 +166,34 @@ def api_get_tasks():
     }
 
 
+@app.route("/api/tasks", methods=["POST"])
+@login_required
+def api_create_task():
+    data = request.get_json()
+
+    if not data or not data.get("title"):
+        return {"error": "Title is required"}, 400
+
+    due_date = None
+    if data.get("due_date"):
+        due_date = date.fromisoformat(data["due_date"])
+
+    task = Task(
+        owner=session["user"],
+        title=data["title"],
+        description=data.get("description", ""),
+        due_date=due_date
+    )
+
+    db.session.add(task)
+    db.session.commit()
+
+    return {
+        "message": "Task created",
+        "task_id": task.id
+    }, 201
+
+
 if __name__ == "__main__":
     init_db()
     app.run(debug=True)
