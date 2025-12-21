@@ -194,6 +194,33 @@ def api_create_task():
     }, 201
 
 
+@app.route("/api/tasks/<int:task_id>", methods=["PUT"])
+@login_required
+def api_update_task(task_id):
+    task = Task.query.filter_by(
+        id=task_id,
+        owner=session["user"]
+    ).first_or_404()
+
+    data = request.get_json()
+
+    if "title" in data:
+        task.title = data["title"]
+
+    if "description" in data:
+        task.description = data["description"]
+
+    if "done" in data:
+        task.done = data["done"]
+
+    if "due_date" in data:
+        task.due_date = date.fromisoformat(data["due_date"]) if data["due_date"] else None
+
+    db.session.commit()
+
+    return {"message": "Task updated"}
+
+
 if __name__ == "__main__":
     init_db()
     app.run(debug=True)
