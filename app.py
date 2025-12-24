@@ -4,49 +4,58 @@ from datetime import datetime, timedelta, date
 from functools import wraps
 
 app = Flask(__name__)
-app.secret_key = "dev-secret"  # keep for now (later move to env var)
+app.secret_key = "dev-secret"  # move to env var in production
 
-# Hardcoded demo user
+# Demo user (for learning purposes)
 DEMO_USER = {
     "username": "admin",
     "password": "123"
 }
 
-# SQLite database stored in project folder as tasks.db
+# Database config
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///tasks.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 
+# --------------------
+# Models
+# --------------------
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     owner = db.Column(db.String(80), nullable=False)
     title = db.Column(db.String(120), nullable=False)
-    description = db.Column(db.Text, nullable=True)
-    due_date = db.Column(db.Date, nullable=True)
+    description = db.Column(db.Text)
+    due_date = db.Column(db.Date)
     done = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
-# Create tables once when app starts (better than before_request)
 def init_db():
     with app.app_context():
         db.create_all()
 
 
+# --------------------
+# Auth helpers
+# --------------------
 def login_required(view_func):
     @wraps(view_func)
     def wrapper(*args, **kwargs):
-        # Strict: must be logged in as DEMO_USER
         if "user" not in session:
             flash("Please log in first.")
             return redirect(url_for("login"))
         return view_func(*args, **kwargs)
     return wrapper
 
+
+# --------------------
+# Routes (HTML)
+# --------------------
 @app.route("/")
 def home():
     return render_template("home.html")
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -55,14 +64,15 @@ def login():
         password = request.form.get("password", "").strip()
 
         if username == DEMO_USER["username"] and password == DEMO_USER["password"]:
-            session.clear()  # prevents weird “old session data” issues
+            session.clear()
             session["user"] = username
             flash("Logged in successfully.")
             return redirect(url_for("tasks"))
-        else:
-            flash("Invalid username or password.")
+
+        flash("Invalid username or password.")
 
     return render_template("login.html")
+
 
 @app.route("/logout")
 def logout():
@@ -70,18 +80,23 @@ def logout():
     flash("Logged out.")
     return redirect(url_for("home"))
 
+
 @app.route("/tasks", methods=["GET", "POST"])
 @login_required
 def tasks():
     if request.method == "POST":
         title = request.form.get("title", "").strip()
         description = request.form.get("description", "").strip()
-
-        due_date_raw = request.form.get("due_date", "").strip()
+        due_date_raw = request.form.get("due_date", "")
         due_date = date.fromisoformat(due_date_raw) if due_date_raw else None
 
         if title:
-            db.session.add(Task(owner=session["user"], title=title, description=description, due_date=due_date))
+            db.session.add(Task(
+                owner=session["user"],
+                title=title,
+                description=description,
+                due_date=due_date
+            ))
             db.session.commit()
 
         return redirect(url_for("tasks"))
@@ -89,19 +104,19 @@ def tasks():
     today = date.today()
     due_soon_cutoff = today + timedelta(days=3)
 
-    all_tasks = Task.query.filter_by(owner=session["user"]).order_by(
+    tasks = Task.query.filter_by(owner=session["user"]).order_by(
         Task.due_date.is_(None),
         Task.due_date.asc(),
         Task.created_at.desc()
     ).all()
 
-
     return render_template(
         "tasks.html",
-        tasks=all_tasks,
+        tasks=tasks,
         today=today,
         due_soon_cutoff=due_soon_cutoff
     )
+
 
 @app.route("/tasks/<int:task_id>/toggle", methods=["POST"])
 @login_required
@@ -111,6 +126,7 @@ def toggle_task(task_id):
     db.session.commit()
     return redirect(url_for("tasks"))
 
+
 @app.route("/tasks/<int:task_id>/delete", methods=["POST"])
 @login_required
 def delete_task(task_id):
@@ -118,6 +134,7 @@ def delete_task(task_id):
     db.session.delete(task)
     db.session.commit()
     return redirect(url_for("tasks"))
+
 
 @app.route("/tasks/<int:task_id>/edit", methods=["GET", "POST"])
 @login_required
@@ -127,7 +144,7 @@ def edit_task(task_id):
     if request.method == "POST":
         title = request.form.get("title", "").strip()
         description = request.form.get("description", "").strip()
-        due_date_raw = request.form.get("due_date", "").strip()
+        due_date_raw = request.form.get("due_date", "")
         due_date = date.fromisoformat(due_date_raw) if due_date_raw else None
 
         if not title:
@@ -144,6 +161,10 @@ def edit_task(task_id):
 
     return render_template("edit_task.html", task=task)
 
+
+# --------------------
+# API (JSON)
+# --------------------
 @app.route("/api/tasks", methods=["GET"])
 @login_required
 def api_get_tasks():
@@ -154,14 +175,14 @@ def api_get_tasks():
     return {
         "tasks": [
             {
-                "id": task.id,
-                "title": task.title,
-                "description": task.description,
-                "due_date": task.due_date.isoformat() if task.due_date else None,
-                "done": task.done,
-                "created_at": task.created_at.isoformat()
+                "id": t.id,
+                "title": t.title,
+                "description": t.description,
+                "due_date": t.due_date.isoformat() if t.due_date else None,
+                "done": t.done,
+                "created_at": t.created_at.isoformat()
             }
-            for task in tasks
+            for t in tasks
         ]
     }
 
@@ -170,13 +191,10 @@ def api_get_tasks():
 @login_required
 def api_create_task():
     data = request.get_json()
-
     if not data or not data.get("title"):
         return {"error": "Title is required"}, 400
 
-    due_date = None
-    if data.get("due_date"):
-        due_date = date.fromisoformat(data["due_date"])
+    due_date = date.fromisoformat(data["due_date"]) if data.get("due_date") else None
 
     task = Task(
         owner=session["user"],
@@ -188,54 +206,35 @@ def api_create_task():
     db.session.add(task)
     db.session.commit()
 
-    return {
-        "message": "Task created",
-        "task_id": task.id
-    }, 201
+    return {"message": "Task created", "task_id": task.id}, 201
 
 
 @app.route("/api/tasks/<int:task_id>", methods=["PUT"])
 @login_required
 def api_update_task(task_id):
-    task = Task.query.filter_by(
-        id=task_id,
-        owner=session["user"]
-    ).first_or_404()
-
+    task = Task.query.filter_by(id=task_id, owner=session["user"]).first_or_404()
     data = request.get_json()
 
-    if "title" in data:
-        task.title = data["title"]
-
-    if "description" in data:
-        task.description = data["description"]
-
-    if "done" in data:
-        task.done = data["done"]
+    for field in ["title", "description", "done"]:
+        if field in data:
+            setattr(task, field, data[field])
 
     if "due_date" in data:
         task.due_date = date.fromisoformat(data["due_date"]) if data["due_date"] else None
 
     db.session.commit()
-
     return {"message": "Task updated"}
 
 
 @app.route("/api/tasks/<int:task_id>", methods=["DELETE"])
 @login_required
 def api_delete_task(task_id):
-    task = Task.query.filter_by(
-        id=task_id,
-        owner=session["user"]
-    ).first_or_404()
-
+    task = Task.query.filter_by(id=task_id, owner=session["user"]).first_or_404()
     db.session.delete(task)
     db.session.commit()
-
     return {"message": "Task deleted"}
 
 
 if __name__ == "__main__":
     init_db()
     app.run(debug=True)
-
